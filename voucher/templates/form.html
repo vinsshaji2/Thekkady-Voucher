@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ 'Edit ' ~ booking.code if booking else 'New Booking' }}{% endblock %}
+
+{% macro hotel_row(h, i) %}
+<div class="hotel-row" data-hotel>
+  <div class="idx" data-idx>{{ '%02d' % i }}</div>
+  <div class="field loc">
+    <label>Location</label>
+    <input class="input" name="hotel_location" value="{{ h.location }}" placeholder="Munnar" data-loc>
+  </div>
+  <div class="field hname">
+    <label>Hotel / Resort name</label>
+    <input class="input" name="hotel_name" value="{{ h.hotel_name }}" placeholder="Munnar Summer Castle">
+  </div>
+  <div class="field cin">
+    <label>Check-in</label>
+    <input class="input" type="date" name="hotel_in" value="{{ h.check_in }}" data-cin>
+  </div>
+  <div class="field cout">
+    <label>Check-out</label>
+    <input class="input" type="date" name="hotel_out" value="{{ h.check_out }}" data-cout>
+  </div>
+  <div class="field nights-box">
+    <label>Nights</label>
+    <input class="input" value="" readonly tabindex="-1" data-nights>
+  </div>
+  <button type="button" class="icon-btn icon-btn--danger del" title="Remove hotel" data-remove>{{ icon('trash') }}</button>
+  <div class="field room">
+    <label>Room / meal plan (optional)</label>
+    <input class="input" name="hotel_room" value="{{ h.room_type }}" placeholder="Deluxe Room · Breakfast">
+  </div>
+</div>
+{% endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">{{ booking.code if booking else 'New voucher' }}</div>
+    <h1 class="page-title">{{ 'Edit Booking' if booking else 'Create Booking' }}</h1>
+    <p class="page-sub">Fill in the essentials — duration, nights, GST and balance are calculated for you.</p>
+  </div>
+  <div class="head-actions">
+    <a class="btn btn--ghost" href="{{ url_for('main.booking_view', booking_id=booking.id) if booking else url_for('main.dashboard') }}">{{ icon('back') }} Back</a>
+  </div>
+</div>
+
+{% if errors %}
+<div class="alert alert--error" style="margin-bottom:18px">
+  Please fix the following:
+  <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<form method="post" id="booking-form" novalidate data-company-state="{{ (S.company_gstin or '')[:2] }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="form-layout">
+    <div>
+      <!-- 01 Guest & trip -->
+      <section class="card section">
+        <div class="section__head">
+          <div class="section__num">01</div>
+          <div><div class="section__title">Guest &amp; Trip Details</div><div class="section__hint">Who is travelling and when</div></div>
+        </div>
+        <div class="section__body grid grid-4">
+          <div class="field span-2">
+            <label for="guest_name">Guest / lead traveller <span class="req">*</span></label>
+            <input class="input" id="guest_name" name="guest_name" value="{{ f.guest_name }}" required maxlength="160" placeholder="Sneha">
+          </div>
+          <div class="field span-2">
+            <label for="contact">Contact number</label>
+            <input class="input" id="contact" name="contact" value="{{ f.contact }}" inputmode="tel" maxlength="40" placeholder="+91 98271 93946">
+          </div>
+          <div class="field">
+            <label for="adults">Adults <span class="req">*</span></label>
+            <input class="input" id="adults" name="adults" type="number" min="1" max="999" value="{{ f.adults }}">
+          </div>
+          <div class="field">
+            <label for="children">Children</label>
+            <input class="input" id="children" name="children" type="number" min="0" max="999" value="{{ f.children }}">
+          </div>
+          <div class="field">
+            <label for="start_date">Travel from <span class="req">*</span></label>
+            <input class="input" id="start_date" name="start_date" type="date" value="{{ f.start_date }}" required>
+          </div>
+          <div class="field">
+            <label for="end_date">Travel to <span class="req">*</span></label>
+            <input class="input" id="end_date" name="end_date" type="date" value="{{ f.end_date }}" required>
+          </div>
+          <div class="field span-2">
+            <label for="package_name">Package name</label>
+            <input class="input" id="package_name" name="package_name" value="{{ f.package_name }}" maxlength="200" placeholder="Premium Thekkady Experience">
+            <small>Shown as “<span data-out="duration">6 Days / 5 Nights</span> – your package name”.</small>
+          </div>
+          <div class="field">
+            <label for="pickup_city">Pickup city</label>
+            <input class="input" id="pickup_city" name="pickup_city" value="{{ f.pickup_city }}" maxlength="120" placeholder="Kochi">
+          </div>
+          <div class="field">
+            <label for="drop_city">Drop city</label>
+            <input class="input" id="drop_city" name="drop_city" value="{{ f.drop_city }}" maxlength="120" placeholder="Kochi">
+          </div>
+        </div>
+      </section>
+
+      <!-- 02 Package summary -->
+      <section class="card section">
+        <div class="section__head">
+          <div class="section__num">02</div>
+          <div><div class="section__title">Package Summary</div><div class="section__hint">Duration and stay are automatic</div></div>
+        </div>
+        <div class="section__body grid grid-4">
+          <div class="field">
+            <label>Duration <span class="auto-chip">Auto</span></label>
+            <input class="input" readonly tabindex="-1" data-out-input="duration" value="">
+          </div>
+          <div class="field">
+            <label>Stay <span class="auto-chip">Auto</span></label>
+            <input class="input" readonly tabindex="-1" data-out-input="stay" value="">
+          </div>
+          <div class="field span-2">
+            <label for="transport">Transport</label>
+            <input class="input" id="transport" name="transport" value="{{ f.transport }}" list="transport-list" maxlength="120">
+            <datalist id="transport-list">
+              <option value="Sedan"><option value="SUV"><option value="Innova Crysta"><option value="Tempo Traveller"><option value="Mini Bus"><option value="Luxury Coach">
+            </datalist>
+          </div>
+          <div class="field span-all">
+            <label for="destinations">Destinations</label>
+            <input class="input" id="destinations" name="destinations" value="{{ f.destinations }}" maxlength="300" data-dest>
+            <small>Leave blank to use hotel locations automatically (<span data-out="dest-auto">add hotels below</span>).</small>
+          </div>
+        </div>
+      </section>
+
+      <!-- 03 Accommodation -->
+      <section class="card section">
+        <div class="section__head">
+          <div class="section__num">03</div>
+          <div><div class="section__title">Accommodation Details</div><div class="section__hint">Nights are calculated from check-in / check-out</div></div>
+        </div>
+        <div class="section__body">
+          <div class="hotel-list" id="hotel-list">
+            {% for h in f.hotels %}{{ hotel_row(h, loop.index) }}{% endfor %}
+          </div>
+          <template id="hotel-template">{{ hotel_row({'location': '', 'hotel_name': '', 'room_type': '', 'check_in': '', 'check_out': ''}, 0) }}</template>
+          <div class="hotel-foot">
+            <button type="button" class="btn btn--ghost btn--sm" id="add-hotel">{{ icon('plus') }} Add hotel</button>
+            <span class="check check--idle" id="nights-check">Add travel dates and hotels to check nights</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 04 Itinerary -->
+      <section class="card section">
+        <div class="section__head">
+          <div class="section__num">04</div>
+          <div><div class="section__title">Day-wise Itinerary</div><div class="section__hint">Paste it as-is — emojis and line breaks are kept</div></div>
+        </div>
+        <div class="section__body">
+          <textarea class="textarea textarea--tall" name="itinerary" id="itinerary" placeholder="💦 DAY 1 – KOCHI → ATHIRAPPILLY → MUNNAR
+🚗 Private pickup from Kochi
+💦 Athirappilly Waterfalls
+…">{{ f.itinerary }}</textarea>
+          <small class="sub">Tip: lines starting with “DAY 1”, “DAY 2”… become highlighted day headings; ALL-CAPS lines become sub-headings.</small>
+        </div>
+      </section>
+
+      <!-- 05 Inclusions / exclusions -->
+      <section class="card section">
+        <div class="section__head">
+          <div class="section__num">05</div>
+          <div><div class="section__title">Inclusions &amp; Exclusions</div><div class="section__hint">Pre-filled from Settings — edit for this booking</div></div>
+        </div>
+        <div class="section__body grid grid-2">
+          <div class="field">
+            <label for="inclusions">Inclusions (one per line)</label>
+            <textarea class="textarea" name="inclusions" id="inclusions" rows="9">{{ f.inclusions }}</textarea>
+          </div>
+          <div class="field">
+            <label for="exclusions">Exclusions (one per line)</label>
+            <textarea class="textarea" name="exclusions" id="exclusions" rows="9">{{ f.exclusions }}</textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- 06 Payment -->
+      <section class="card section">
+        <div class="section__head">
+          <div class="section__num">06</div>
+          <div><div class="section__title">Payment Summary</div><div class="section__hint">GST, total and balance are automatic</div></div>
+        </div>
+        <div class="section__body">
+          <div class="field">
+            <label>Billing</label>
+            <div class="segment" role="radiogroup">
+              <input type="radio" id="gst-no" name="gst_mode" value="none" {{ 'checked' if not f.gst_enabled }}><label for="gst-no">Without GST</label>
+              <input type="radio" id="gst-yes" name="gst_mode" value="gst" {{ 'checked' if f.gst_enabled }}><label for="gst-yes">With GST (5%)</label>
+            </div>
+          </div>
+          <div class="gst-box grid grid-2" id="gst-box" {{ 'hidden' if not f.gst_enabled }}>
+            <div class="field">
+              <label for="customer_gstin">Customer GSTIN</label>
+              <input class="input" id="customer_gstin" name="customer_gstin" value="{{ f.customer_gstin }}" maxlength="15" placeholder="32ABCDE1234F1Z5" style="text-transform:uppercase" autocomplete="off">
+              <small id="gstin-hint">Optional. Same state → CGST 2.5% + SGST 2.5%; other state → IGST 5%.</small>
+            </div>
+            <div class="field">
+              <label for="customer_business">Registered business name</label>
+              <input class="input" id="customer_business" name="customer_business" value="{{ f.customer_business }}" maxlength="200" placeholder="Optional">
+            </div>
+          </div>
+          <div class="grid grid-2" style="margin-top:16px">
+            <div class="field">
+              <label for="package_amount">Total package amount <span class="req">*</span></label>
+              <div class="input-prefix"><span>₹</span><input class="input" id="package_amount" name="package_amount" value="{{ f.package_amount }}" inputmode="decimal" placeholder="36,500"></div>
+              <small data-gst-note>Amount before GST — 5% is added on top only when “With GST” is selected.</small>
+            </div>
+            <div class="field">
+              <label for="advance_amount">Advance received</label>
+              <div class="input-prefix"><span>₹</span><input class="input" id="advance_amount" name="advance_amount" value="{{ f.advance_amount }}" inputmode="decimal" placeholder="15,000"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- live summary -->
+    <aside class="card summary">
+      <div class="summary__top">
+        <div class="summary__eyebrow">Live summary</div>
+        <div class="summary__guest" data-out="guest">New guest</div>
+        <div class="summary__trip" data-out="trip">Add travel dates</div>
+      </div>
+      <div class="summary__rows">
+        <div class="srow"><span>Travellers</span><span data-out="travellers">—</span></div>
+        <div class="srow"><span>Hotel nights</span><span data-out="hotel-nights">—</span></div>
+        <div class="srow"><span>Package value</span><span data-out="amount">₹0</span></div>
+        <div class="srow" data-row="cgst" hidden><span>CGST @ 2.5%</span><span data-out="cgst">₹0</span></div>
+        <div class="srow" data-row="sgst" hidden><span>SGST @ 2.5%</span><span data-out="sgst">₹0</span></div>
+        <div class="srow" data-row="igst" hidden><span>IGST @ 5%</span><span data-out="igst">₹0</span></div>
+        <div class="srow srow--total"><span>Total</span><span data-out="total">₹0</span></div>
+        <div class="srow"><span>Advance received</span><span data-out="advance">₹0</span></div>
+      </div>
+      <div class="balance-box">
+        <small>Balance due</small>
+        <strong data-out="balance">₹0</strong>
+        <span class="pill pill--pending" data-out="status">Payment Pending</span>
+      </div>
+      <div class="summary__actions">
+        <button class="btn btn--gold btn--block" type="submit" name="action" value="save_download">{{ icon('download') }} Save &amp; Download PDF</button>
+        <button class="btn btn--primary btn--block" type="submit" name="action" value="save">{{ icon('save') }} Save Booking</button>
+      </div>
+    </aside>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ asset('js/form.js') }}"></script>
+{% endblock %}

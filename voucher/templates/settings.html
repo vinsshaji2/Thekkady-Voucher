@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Configuration</div>
+    <h1 class="page-title">Company &amp; Voucher Settings</h1>
+    <p class="page-sub">These details appear on every PDF. Changes apply to new downloads immediately.</p>
+  </div>
+</div>
+
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <section class="card section">
+    <div class="section__head">
+      <div class="section__num">i</div>
+      <div><div class="section__title">Details</div><div class="section__hint">Company, contact and signatory</div></div>
+    </div>
+    <div class="section__body settings-grid">
+      {% for key, label, default, kind in fields if kind == 'text' %}
+      <div class="field">
+        <label for="{{ key }}">{{ label }}</label>
+        <input class="input" id="{{ key }}" name="{{ key }}" value="{{ S[key] }}">
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card section">
+    <div class="section__head">
+      <div class="section__num">ii</div>
+      <div><div class="section__title">Default texts</div><div class="section__hint">Emojis are welcome — they render in colour on the PDF</div></div>
+    </div>
+    <div class="section__body settings-grid">
+      {% for key, label, default, kind in fields if kind == 'textarea' %}
+      <div class="field {{ 'span-all' if key == 'terms' }}">
+        <label for="{{ key }}">{{ label }}</label>
+        <textarea class="textarea" id="{{ key }}" name="{{ key }}" rows="{{ 3 if key == 'address' else 9 }}">{{ S[key] }}</textarea>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card section">
+    <div class="section__head">
+      <div class="section__num">iii</div>
+      <div><div class="section__title">Logo &amp; signature</div><div class="section__hint">Replace the image files and redeploy</div></div>
+    </div>
+    <div class="section__body grid grid-2">
+      <div class="note">
+        <p style="margin-top:0"><strong>Logo:</strong> replace <code>voucher/static/img/logo.png</code><br>
+        Transparent PNG, at least 600&nbsp;px wide.</p>
+        <img src="{{ asset('img/logo.png') }}" alt="Current logo" style="max-height:90px">
+      </div>
+      <div class="note">
+        <p style="margin-top:0"><strong>Signature:</strong> replace <code>voucher/static/img/signature.png</code><br>
+        Transparent PNG, about 600&nbsp;×&nbsp;250&nbsp;px, dark ink.</p>
+        <img src="{{ asset('img/signature.png') }}" alt="Current signature" style="max-height:70px">
+      </div>
+    </div>
+  </section>
+
+  <div class="head-actions" style="justify-content:flex-end">
+    <button class="btn btn--primary" type="submit">{{ icon('save') }} Save settings</button>
+  </div>
+</form>
+{% endblock %}

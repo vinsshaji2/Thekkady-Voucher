@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}Bookings{% endblock %}
+{% macro status_pill(status) -%}
+  {%- set cls = {'Fully Paid': 'paid', 'Advance Paid': 'advance'}.get(status, 'pending') -%}
+  <span class="pill pill--{{ cls }}">{{ status }}</span>
+{%- endmacro %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Booking Desk</div>
+    <h1 class="page-title">Confirmed Bookings</h1>
+    <p class="page-sub">Create vouchers, track payments and download premium PDFs.</p>
+  </div>
+  <div class="head-actions">
+    <a class="btn btn--ghost" href="{{ url_for('main.export_csv') }}">{{ icon('sheet') }} Export CSV</a>
+    <a class="btn btn--gold" href="{{ url_for('main.booking_new') }}">{{ icon('plus') }} New Booking</a>
+  </div>
+</div>
+
+<section class="stats">
+  <div class="card stat stat--dark"><div class="stat__label">Total Bookings</div><div class="stat__value">{{ stats.count }}</div></div>
+  <div class="card stat"><div class="stat__label">Upcoming Trips</div><div class="stat__value">{{ stats.upcoming }}</div></div>
+  <div class="card stat"><div class="stat__label">Package Value</div><div class="stat__value">{{ stats.value|inr }}</div></div>
+  <div class="card stat"><div class="stat__label">Balance Outstanding</div><div class="stat__value">{{ stats.outstanding|inr }}</div></div>
+</section>
+
+<section class="card">
+  <div class="toolbar">
+    <form class="search" method="get" role="search">
+      {{ icon('search') }}
+      <input class="input" type="search" name="q" value="{{ q }}" placeholder="Search guest, booking ID, phone or package…">
+    </form>
+    {% if q %}<a class="btn btn--ghost btn--sm" href="{{ url_for('main.dashboard') }}">Clear search</a>{% endif %}
+  </div>
+
+  {% if page.items %}
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Booking</th><th>Guest</th><th>Travel Dates</th><th>Package</th>
+          <th class="num">Total</th><th class="num">Balance</th><th>Status</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for b in page.items %}
+        {% set p = b.payment(S.company_gstin) %}
+        <tr>
+          <td>
+            <a class="code" href="{{ url_for('main.booking_view', booking_id=b.id) }}">{{ b.code }}</a>
+            <div class="sub">Issued {{ b.issued_on|date }}</div>
+          </td>
+          <td>
+            <div class="guest">{{ b.guest_name }}</div>
+            <div class="sub">{{ b.travellers_label }}{% if b.contact %} · {{ b.contact }}{% endif %}</div>
+          </td>
+          <td>
+            {{ b.start_date|date('%d %b') }} – {{ b.end_date|date('%d %b %Y') }}
+            <div class="sub">{{ b.duration_label }}{% if b.start_date and b.start_date >= today %} · upcoming{% endif %}</div>
+          </td>
+          <td>
+            <div>{{ b.package_name or '—' }}</div>
+            <div class="sub">{{ b.pickup_city }}{% if b.drop_city %} → {{ b.drop_city }}{% endif %}</div>
+          </td>
+          <td class="num">
+            {{ p.total|inr }}
+            {% if b.gst_enabled %}<div><span class="pill pill--gst">GST</span></div>{% endif %}
+          </td>
+          <td class="num">{{ p.balance|inr }}</td>
+          <td>{{ status_pill(p.status) }}</td>
+          <td>
+            <div class="row-actions">
+              <a class="icon-btn" title="View" href="{{ url_for('main.booking_view', booking_id=b.id) }}">{{ icon('eye') }}</a>
+              <a class="icon-btn" title="Download PDF" href="{{ url_for('main.booking_pdf', booking_id=b.id, download=1) }}">{{ icon('download') }}</a>
+              <a class="icon-btn" title="Edit" href="{{ url_for('main.booking_edit', booking_id=b.id) }}">{{ icon('edit') }}</a>
+              <form method="post" action="{{ url_for('main.booking_delete', booking_id=b.id) }}"
+                    data-confirm="Delete booking {{ b.code }} for {{ b.guest_name }}? This cannot be undone.">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="icon-btn icon-btn--danger" title="Delete" type="submit">{{ icon('trash') }}</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page.pages > 1 %}
+  <div class="pager">
+    <span>Page {{ page.page }} of {{ page.pages }} · {{ page.total }} bookings</span>
+    <span class="head-actions">
+      {% if page.has_prev %}<a class="btn btn--ghost btn--sm" href="{{ url_for('main.dashboard', page=page.prev_num, q=q or None) }}">Previous</a>{% endif %}
+      {% if page.has_next %}<a class="btn btn--ghost btn--sm" href="{{ url_for('main.dashboard', page=page.next_num, q=q or None) }}">Next</a>{% endif %}
+    </span>
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="empty">
+    {% if q %}
+      <h3>No bookings match “{{ q }}”</h3>
+      <p class="sub">Try a guest name, booking ID or phone number.</p>
+    {% else %}
+      <h3>No bookings yet</h3>
+      <p class="sub">Create your first confirmation voucher — it takes about two minutes.</p>
+      <p><a class="btn btn--gold" href="{{ url_for('main.booking_new') }}">{{ icon('plus') }} New Booking</a></p>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

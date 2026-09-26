@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block body_class %}login-body{% endblock %}
+{% block main %}
+<main class="card login-card">
+  <img class="login-logo" src="{{ asset('img/logo.png') }}" alt="{{ S.company_name }}">
+  <h1>Booking Desk</h1>
+  <div class="ornament"><span></span></div>
+  <p class="page-sub">Sign in to create and manage confirmation vouchers.</p>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}<div class="alert alert--{{ cat }}" style="margin-bottom:14px;text-align:left">{{ msg }}</div>{% endfor %}
+  {% endwith %}
+  {% if not_configured %}
+    <div class="alert alert--error" style="margin-bottom:14px;text-align:left">
+      ADMIN_PASSWORD is not set. Add it in Vercel → Settings → Environment Variables and redeploy.
+    </div>
+  {% elif local_default %}
+    <div class="alert alert--info" style="margin-bottom:14px;text-align:left">
+      Local mode: sign in with <strong>admin / admin</strong>. Set ADMIN_PASSWORD in <code>.env</code> to change it.
+    </div>
+  {% endif %}
+
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label for="username">Username</label>
+      <input class="input" id="username" name="username" autocomplete="username" required autofocus>
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input class="input" id="password" name="password" type="password" autocomplete="current-password" required>
+    </div>
+    <button class="btn btn--primary btn--block" type="submit" style="margin-top:6px">Sign in</button>
+  </form>
+</main>
+{% endblock %}

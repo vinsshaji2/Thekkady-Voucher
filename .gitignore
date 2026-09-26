@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+venv/
+instance/
+.vercel
+voucher/static/emoji/*.missing
+voucher/static/emoji/.*.tmp
+sample-voucher*.pdf

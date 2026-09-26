@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ b.code }} · {{ b.guest_name }}{% endblock %}
+{% block content %}
+{% set cls = {'Fully Paid': 'paid', 'Advance Paid': 'advance'}.get(pay.status, 'pending') %}
+<section class="card hero">
+  <div>
+    <div class="eyebrow">{{ b.code }} · Issued {{ b.issued_on|date }}</div>
+    <h1>{{ b.guest_name }}</h1>
+    <p>{{ b.duration_label }}{% if b.package_name %} · {{ b.package_name }}{% endif %}</p>
+    <p>{{ b.start_date|date }} – {{ b.end_date|date }} · {{ b.travellers_label }}</p>
+  </div>
+  <div class="head-actions">
+    <a class="btn btn--gold" href="{{ url_for('main.booking_pdf', booking_id=b.id, download=1) }}" id="download-btn">{{ icon('download') }} Download PDF</a>
+    <a class="btn btn--ghost" href="{{ url_for('main.booking_edit', booking_id=b.id) }}">{{ icon('edit') }} Edit</a>
+    <form method="post" action="{{ url_for('main.booking_duplicate', booking_id=b.id) }}" style="margin:0">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn--ghost" type="submit">{{ icon('copy') }} Duplicate</button>
+    </form>
+  </div>
+</section>
+
+<div class="view-grid">
+  <div style="display:grid;gap:22px">
+    <section class="card card__body">
+      <div class="card__title">Payment</div>
+      <dl class="kv">
+        <div><dt>Package value</dt><dd>{{ pay.amount|inr }}</dd></div>
+        {% if pay.gst_enabled %}
+          {% if pay.mode == 'igst' %}
+          <div><dt>IGST @ 5%</dt><dd>{{ pay.igst|inr }}</dd></div>
+          {% else %}
+          <div><dt>CGST @ 2.5%</dt><dd>{{ pay.cgst|inr }}</dd></div>
+          <div><dt>SGST @ 2.5%</dt><dd>{{ pay.sgst|inr }}</dd></div>
+          {% endif %}
+        {% endif %}
+        <div><dt><strong>Total</strong></dt><dd>{{ pay.total|inr }}</dd></div>
+        <div><dt>Advance received</dt><dd>{{ pay.advance|inr }}</dd></div>
+        <div><dt><strong>Balance due</strong></dt><dd>{{ pay.balance|inr }}</dd></div>
+        <div><dt>Status</dt><dd><span class="pill pill--{{ cls }}">{{ pay.status }}</span></dd></div>
+        {% if b.gst_enabled %}<div><dt>Customer GSTIN</dt><dd>{{ b.customer_gstin or '—' }}</dd></div>{% endif %}
+      </dl>
+    </section>
+
+    <section class="card card__body">
+      <div class="card__title">Trip</div>
+      <dl class="kv">
+        <div><dt>Contact</dt><dd>{{ b.contact or '—' }}</dd></div>
+        <div><dt>Pickup → Drop</dt><dd>{{ b.pickup_city or '—' }} → {{ b.drop_city or '—' }}</dd></div>
+        <div><dt>Destinations</dt><dd>{{ b.destinations_label or '—' }}</dd></div>
+        <div><dt>Transport</dt><dd>{{ b.transport or '—' }}</dd></div>
+        <div><dt>Hotel nights</dt><dd>{{ b.hotel_nights }} of {{ b.nights }}</dd></div>
+      </dl>
+    </section>
+
+    <section class="card card__body">
+      <div class="card__title">Hotels</div>
+      <dl class="kv">
+        {% for h in b.hotels %}
+        <div><dt>{{ h.location or '—' }}<br><span class="sub">{{ h.check_in|date('%d %b') }} – {{ h.check_out|date('%d %b') }}</span></dt>
+             <dd>{{ h.hotel_name }}<br><span class="sub">{{ h.nights }} {{ 'night' if h.nights == 1 else 'nights' }}</span></dd></div>
+        {% else %}
+        <div><dt>No hotels added</dt><dd></dd></div>
+        {% endfor %}
+      </dl>
+    </section>
+
+    <form method="post" action="{{ url_for('main.booking_delete', booking_id=b.id) }}"
+          data-confirm="Delete booking {{ b.code }} for {{ b.guest_name }}? This cannot be undone.">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn--danger btn--block" type="submit">{{ icon('trash') }} Delete booking</button>
+    </form>
+  </div>
+
+  <section class="card">
+    <div class="pdf-head">
+      <div class="card__title" style="margin:0">Voucher preview</div>
+      <a class="btn btn--ghost btn--sm" href="{{ url_for('main.booking_pdf', booking_id=b.id) }}" target="_blank" rel="noopener">{{ icon('file') }} Open in new tab</a>
+    </div>
+    <iframe class="pdf-frame" src="{{ url_for('main.booking_pdf', booking_id=b.id) }}#view=FitH" title="Voucher PDF preview"></iframe>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+{% if request.args.get('download') %}
+<script>
+  // "Save & Download" lands here: start the download once, then clean the URL.
+  window.addEventListener("load", function () {
+    window.location.href = document.getElementById("download-btn").href;
+    history.replaceState(null, "", window.location.pathname);
+  });
+</script>
+{% endif %}
+{% endblock %}

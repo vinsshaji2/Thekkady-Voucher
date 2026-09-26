@@ -14,6 +14,12 @@ PROJECT_DIR = os.path.dirname(PACKAGE_DIR)
 def _database_url():
     url = (os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL") or "").strip()
     if not url:
+        # Neon's Vercel integration may add a custom prefix, e.g. STORAGE_DATABASE_URL
+        for key in sorted(os.environ):
+            if key.endswith(("_DATABASE_URL", "_POSTGRES_URL")) and "UNPOOLED" not in key:
+                url = os.environ[key].strip()
+                break
+    if not url:
         if os.environ.get("VERCEL"):
             raise RuntimeError(
                 "DATABASE_URL is not set. Connect a Neon database in Vercel -> Storage, then redeploy."
